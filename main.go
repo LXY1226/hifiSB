@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"sort"
 	"time"
 )
 
@@ -92,6 +93,7 @@ func resumeLogin() error {
 	bClient = client.NewClientEmpty()
 	bClient.GroupMessageEvent.Subscribe(GroupHandler)
 	bClient.DisconnectedEvent.Subscribe(DisconnectedEvent)
+	bClient.GroupMemberJoinEvent.Subscribe(JoinEvent)
 	dev, err := os.ReadFile(dataDevice)
 	if err != nil {
 		return err
@@ -105,6 +107,20 @@ func resumeLogin() error {
 		return err
 	}
 	return bClient.TokenLogin(token)
+}
+
+func JoinEvent(c *client.QQClient, e *client.MemberJoinGroupEvent) {
+	if e.Group.Code == 558524420 {
+		if e.Group.MemberCount >= e.Group.MaxMemberCount {
+			members := make([]*client.GroupMemberInfo, len(e.Group.Members))
+			copy(members, e.Group.Members)
+			sort.Slice(members, func(i, j int) bool {
+				return members[i].LastSpeakTime < members[j].LastSpeakTime ||
+					members[i].JoinTime < members[j].JoinTime
+			})
+			members[0].Kick("群满了，清人，需要可以再加回来", false)
+		}
+	}
 }
 
 var hifiSBReply []string
@@ -154,7 +170,7 @@ func GroupHandler(c *client.QQClient, e *message.GroupMessage) {
 	//	}
 	//}
 	if e.GroupCode == 558524420 {
-		if e.Sender.Uin == 61797826 {
+		if e.Sender.Uin == 61797826 || e.Sender.Uin == 4685696 {
 			lastSeen = time.Now()
 			return
 		}
