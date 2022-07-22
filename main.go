@@ -132,6 +132,8 @@ func refreshImg() error {
 	return nil
 }
 
+var lastSeen time.Time
+
 func GroupHandler(c *client.QQClient, e *message.GroupMessage) {
 	if runtime.GOOS != "linux" {
 		log.Println(e.GroupCode, e.Sender.Uin, e.ToString())
@@ -151,30 +153,40 @@ func GroupHandler(c *client.QQClient, e *message.GroupMessage) {
 	//		}
 	//	}
 	//}
-	if e.GroupCode == 558524420 && (e.Sender.Uin == 3406758965 || e.Sender.Uin == 2388843095) {
-		log.Println("狗叫", e.ToString())
-		if rand.Int31()%4 == 0 {
+	if e.GroupCode == 558524420 {
+		if e.Sender.Uin == 61797826 {
+			lastSeen = time.Now()
 			return
 		}
-		if len(hifiSBReply) == 0 {
-			err := refreshImg()
-			if err != nil {
-				c.SendGroupMessage(e.GroupCode, message.NewSendingMessage().Append(message.NewText(err.Error())))
-			}
-			if len(hifiSBReply) == 0 {
+		if e.Sender.Uin == 3406758965 || e.Sender.Uin == 2388843095 {
+			log.Println("狗叫", e.ToString())
+			if time.Since(lastSeen) < 5*time.Minute {
+				log.Println("但是被老板救了一次")
 				return
 			}
-		}
-		i := rand.Intn(len(hifiSBReply))
-		f, err := os.Open(hifiSB + "/" + hifiSBReply[i])
-		if err != nil {
-			c.SendGroupMessage(e.GroupCode, message.NewSendingMessage().Append(message.NewText(err.Error())))
-			return
-		}
-		img, err := c.UploadGroupImage(e.GroupCode, f)
-		f.Close()
-		if err == nil {
-			c.SendGroupMessage(e.GroupCode, message.NewSendingMessage().Append(img))
+			if rand.Int31()%4 == 0 {
+				return
+			}
+			if len(hifiSBReply) == 0 {
+				err := refreshImg()
+				if err != nil {
+					c.SendGroupMessage(e.GroupCode, message.NewSendingMessage().Append(message.NewText(err.Error())))
+				}
+				if len(hifiSBReply) == 0 {
+					return
+				}
+			}
+			i := rand.Intn(len(hifiSBReply))
+			f, err := os.Open(hifiSB + "/" + hifiSBReply[i])
+			if err != nil {
+				c.SendGroupMessage(e.GroupCode, message.NewSendingMessage().Append(message.NewText(err.Error())))
+				return
+			}
+			img, err := c.UploadGroupImage(e.GroupCode, f)
+			f.Close()
+			if err == nil {
+				c.SendGroupMessage(e.GroupCode, message.NewSendingMessage().Append(img))
+			}
 		}
 	}
 }
